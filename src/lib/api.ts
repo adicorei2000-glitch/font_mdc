@@ -1,12 +1,14 @@
 import axios from "axios";
 import { useAuthStore } from "./auth";
+import type { AuthResponse } from "@/types";
 
 export const api = axios.create({
-  baseURL: "http://72.62.195.195:3333",
+  // Use the Vite /api proxy in development and allow deployments to set their own API URL.
+  baseURL: import.meta.env.VITE_API_BASE_URL || "/api/v1",
   headers: { "Content-Type": "application/json" },
 });
 
-// Attach the JWT access token to every request
+// Attach the JWT access token to every request.
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().accessToken;
   if (token) {
@@ -15,7 +17,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// On 401, clear session and let the router redirect to /login
+// On 401, clear the session; ProtectedRoute will redirect to /login.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -26,9 +28,8 @@ api.interceptors.response.use(
   },
 );
 
-// ---- Auth endpoints ----
 export function login(email: string, password: string) {
-  return api.post("/login/", { email, password });
+  return api.post<AuthResponse>("/auth/login", { email, password });
 }
 
 export function register(payload: {
@@ -38,50 +39,39 @@ export function register(payload: {
   password: string;
   role: "patient" | "doctor" | "hospital_admin";
 }) {
-  return api.post("/auth/register", payload);
+  return api.post<AuthResponse>("/auth/register", payload);
 }
 
-// ==========================================================
-// 🔧 MOCK MODE SWITCH
-// true  → Login/Register backendsiz ishlaydi (istalgan email/parol o'tkazadi)
-// false → haqiqiy backendga ulanadi (/api/v1/auth/login)
-// Backend tayyor bo'lganda shu yerda true ni false ga o'zgartiring.
-// ==========================================================
-export const MOCK_AUTH = false;
+// Mocks are opt-in for local development; production uses the real API by default.
+export const MOCK_AUTH = import.meta.env.VITE_MOCK_AUTH === "true";
 
-function fakeUser(email: string, fullName = "Aziza Karimova") {
+function fakeUser(email: string, fullName = "Aziza Karimova"): AuthResponse["user"] {
   return {
     id: "mock-user-1",
     fullName,
     email,
     phone: "+998 90 123 45 67",
-    role: "patient" as const,
+    role: "patient",
+  };
+}
+
+function mockResponse(user: AuthResponse["user"]) {
+  return {
+    data: {
+      user,
+      accessToken: "mock-access-token",
+    } satisfies AuthResponse,
   };
 }
 
 export function mockLogin(email: string) {
-  return new Promise<{
-    data: { user: ReturnType<typeof fakeUser>; accessToken: string };
-  }>((resolve) => {
-    setTimeout(() => {
-      resolve({
-        data: { user: fakeUser(email), accessToken: "mock-access-token" },
-      });
-    }, 400); // simulate network latency
+  return new Promise<ReturnType<typeof mockResponse>>((resolve) => {
+    setTimeout(() => resolve(mockResponse(fakeUser(email))), 400);
   });
 }
 
 export function mockRegister(fullName: string, email: string) {
-  return new Promise<{
-    data: { user: ReturnType<typeof fakeUser>; accessToken: string };
-  }>((resolve) => {
-    setTimeout(() => {
-      resolve({
-        data: {
-          user: fakeUser(email, fullName),
-          accessToken: "mock-access-token",
-        },
-      });
-    }, 400);
+  return new Promise<ReturnType<typeof mockResponse>>((resolve) => {
+    setTimeout(() => resolve(mockResponse(fakeUser(email, fullName))), 400);
   });
 }
