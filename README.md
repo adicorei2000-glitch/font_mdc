@@ -13,9 +13,13 @@ The app runs at `http://localhost:5173`.
 
 ## Connecting to the backend
 
-`vite.config.ts` proxies `/api` requests to `http://localhost:4000` (matching the backend architecture doc). Change this if your backend runs on a different port.
+`vite.config.ts` proxies `/api` requests to `http://localhost:4000` in development. The frontend uses `/api/v1` by default, so requests such as `/auth/login` are sent to `/api/v1/auth/login`. Change the proxy target if your backend runs on a different port.
 
-`src/lib/api.ts` — all API calls go through this file; the JWT token is attached automatically.
+Set `VITE_API_BASE_URL` to override the API base URL for a deployment. Keep this URL public; do not put secrets in Vite environment variables.
+
+Mock authentication is disabled by default. To enable it for local UI work, set `VITE_MOCK_AUTH=true` before starting Vite. Mock mode accepts any valid email and password and must not be enabled in a production deployment.
+
+`src/lib/api.ts` contains the API client; it attaches the stored JWT token automatically.
 
 ## Structure
 
