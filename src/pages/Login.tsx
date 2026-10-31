@@ -7,7 +7,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { AuthLayout } from "@/components/AuthLayout";
 import { TextField } from "@/components/TextField";
 import { Button } from "@/components/Button";
-import { mockLogin } from "@/lib/api";
+import { login, MOCK_AUTH, mockLogin } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth";
 
 const schema = z.object({
@@ -23,7 +23,6 @@ type FormValues = z.infer<typeof schema>;
 
 export default function Login() {
   const navigate = useNavigate();
-
   const setSession = useAuthStore((state) => state.setSession);
 
   const [serverError, setServerError] = useState<string | null>(null);
@@ -42,20 +41,14 @@ export default function Login() {
     setLoading(true);
 
     try {
-      // Mock login — backendga request yuborilmaydi
-      const { data } = await mockLogin(values.email);
+      const { data } = MOCK_AUTH
+        ? await mockLogin(values.email)
+        : await login(values.email, values.password);
 
-      console.log("Mock login:", data);
-
-      // User sessionni saqlash
       setSession(data.user, data.accessToken);
-
-      // Dashboardga o'tish
       navigate("/dashboard");
-    } catch (error) {
-      console.error("Login error:", error);
-
-      setServerError("Login failed. Please try again.");
+    } catch {
+      setServerError("Login failed. Please check your details and try again.");
     } finally {
       setLoading(false);
     }
@@ -71,10 +64,11 @@ export default function Login() {
         Sign in to your account
       </h2>
 
-      {/* Mock mode indicator */}
-      <p className="mt-2 inline-block rounded-md bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-600">
-        Mock mode — any valid email/password logs you in
-      </p>
+      {MOCK_AUTH && (
+        <p className="mt-2 inline-block rounded-md bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-600">
+          Development mock mode is enabled
+        </p>
+      )}
 
       <p className="mt-1.5 text-sm text-ink-500">
         Don't have an account?{" "}
@@ -109,7 +103,7 @@ export default function Login() {
         />
 
         {serverError && (
-          <div className="rounded-lg bg-rose-100 px-3.5 py-2.5 text-sm text-rose-600">
+          <div role="alert" className="rounded-lg bg-rose-100 px-3.5 py-2.5 text-sm text-rose-600">
             {serverError}
           </div>
         )}

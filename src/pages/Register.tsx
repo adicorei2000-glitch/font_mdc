@@ -63,10 +63,21 @@ export default function Register() {
         : await registerRequest(values);
       setSession(data.user, data.accessToken);
       navigate("/dashboard");
-    } catch (err: any) {
-      setServerError(
-        err?.response?.data?.message || "Something went wrong while signing up. Please try again."
-      );
+    } catch (error: unknown) {
+      const message =
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof error.response === "object" &&
+        error.response !== null &&
+        "data" in error.response &&
+        typeof error.response.data === "object" &&
+        error.response.data !== null &&
+        "message" in error.response.data &&
+        typeof error.response.data.message === "string"
+          ? error.response.data.message
+          : "Something went wrong while signing up. Please try again.";
+      setServerError(message);
     } finally {
       setLoading(false);
     }
@@ -94,7 +105,8 @@ export default function Register() {
               <button
                 key={r.value}
                 type="button"
-                onClick={() => setValue("role", r.value)}
+                onClick={() => setValue("role", r.value, { shouldDirty: true, shouldValidate: true })}
+                aria-pressed={selectedRole === r.value}
                 className={clsx(
                   "rounded-lg border px-2.5 py-2.5 text-left text-xs transition-colors",
                   selectedRole === r.value
@@ -109,17 +121,17 @@ export default function Register() {
           </div>
         </div>
 
-        <TextField label="Full name" placeholder="Aziza Karimova" error={errors.fullName?.message} {...register("fullName")} />
-        <TextField label="Email" type="email" placeholder="name@example.com" error={errors.email?.message} {...register("email")} />
-        <TextField label="Phone number" placeholder="+998 90 123 45 67" error={errors.phone?.message} {...register("phone")} />
+        <TextField label="Full name" placeholder="Aziza Karimova" error={errors.fullName?.message} disabled={loading} {...register("fullName")} />
+        <TextField label="Email" type="email" placeholder="name@example.com" error={errors.email?.message} disabled={loading} {...register("email")} />
+        <TextField label="Phone number" placeholder="+998 90 123 45 67" error={errors.phone?.message} disabled={loading} {...register("phone")} />
 
         <div className="grid grid-cols-2 gap-3">
-          <TextField label="Password" type="password" placeholder="••••••••" error={errors.password?.message} {...register("password")} />
-          <TextField label="Confirm password" type="password" placeholder="••••••••" error={errors.confirmPassword?.message} {...register("confirmPassword")} />
+          <TextField label="Password" type="password" placeholder="••••••••" error={errors.password?.message} disabled={loading} {...register("password")} />
+          <TextField label="Confirm password" type="password" placeholder="••••••••" error={errors.confirmPassword?.message} disabled={loading} {...register("confirmPassword")} />
         </div>
 
         {serverError && (
-          <div className="rounded-lg bg-rose-100 px-3.5 py-2.5 text-sm text-rose-600">{serverError}</div>
+          <div role="alert" className="rounded-lg bg-rose-100 px-3.5 py-2.5 text-sm text-rose-600">{serverError}</div>
         )}
 
         <p className="text-xs leading-relaxed text-ink-500">
